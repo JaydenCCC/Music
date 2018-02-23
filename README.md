@@ -52,7 +52,7 @@
 在 config 文件夹下的 index.js 里提供了一个 proxyTable 属性，在这里设置代理是最简单的方法。
 ```
 
-- ##  两种方式
+- #####  两种方式
 > 1、build 文件夹下的 webpack.dev.conf.js
 
 ```
@@ -164,4 +164,41 @@ proxyTable: {
   }
 },
 
+```
+
+#### 生命周期
+```
+   //组件实例创建前触发
+    beforeCreate: function() {
+        console.log(this.$data);
+        console.log(this.$el);
+    }, 
+    //组件实例创建后触发,属性已绑定,但DOM还未生成, $el 属性还不存在
+    created: function() {
+        console.log(this.$data);
+        console.log(this.$el);
+    }, 
+    //挂载前
+    beforeMount: function() {
+        console.log(this.$data);
+        console.log(this.$el);
+    },
+    //挂载结束
+    mounted: function() {
+        console.log(this.$data);
+        console.log(this.$el);
+    },
+    //数据更新前
+    beforeUpdate: function() {},
+    updated: function() {},
+    //数据更新后
+    //组件销毁前调用
+    beforeDestroy: function() {},
+    //组件销毁后调用
+    destroyed: function() {}
+    
+    在 created 中放后端请求比较好,这时候DOM还没开始渲染,等把数据请求回来了一起渲染
+    在 mounted 中可以是对插件的初始化,例如 better-scroll 需要对父元素和子元素的高度之差做计算来设置可以滚动的位置,
+    所以实例化或者调用 refresh() 的时候一定要保证 DOM 是渲染完成的
+    mounted 里设置 setTimeout 的时间为20的原因是: 浏览器刷新一次的时间为17毫秒
 ```
