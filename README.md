@@ -200,5 +200,159 @@ proxyTable: {
     在 created 中放后端请求比较好,这时候DOM还没开始渲染,等把数据请求回来了一起渲染
     在 mounted 中可以是对插件的初始化,例如 better-scroll 需要对父元素和子元素的高度之差做计算来设置可以滚动的位置,
     所以实例化或者调用 refresh() 的时候一定要保证 DOM 是渲染完成的
-    mounted 里设置 setTimeout 的时间为20的原因是: 浏览器刷新一次的时间为17毫秒
+    mounted 里设置 setTimeout 的时间为20 的原因是: 浏览器刷新一次的时间为17毫秒
+```
+
+####  封装方法
+> 
+
+- 使用: 在 mounted 钩子调用的方法中使用 addClass 给 el 添加类名
+```
+export function hasClass(el, className) {
+  let reg = new RegExp('(^|\\s)' + className + '(\\s|$)')
+  return reg.test(el.className)
+}
+
+export function addClass(el, className) {
+  if (hasClass(el, className)) {
+    return
+  }
+
+  // el.className 是以空格隔开各个类名
+  let newClass = el.className.split(' ')
+  newClass.push(className)
+  el.className = newClass.join(' ')
+}
+```
+<br />
+
+- 在 script 里面设置dom元素的样式,我们需要兼容各种浏览器，为了不需要重复写代码，在 dom.js 里面封装了相应的方法
+```
+// 能力检测
+let elementStyle = document.createElement('div').style
+
+let vendor = (() => {
+  let transformNames = {
+    webkit: 'webkitTransform',
+    Moz: 'MozTransform',
+    O: 'OTransform',
+    ms: 'msTransform',
+    standard: 'transform'
+  }
+
+  for (let key in transformNames) {
+    if (elementStyle[transformNames[key]] !== undefined) {
+      return key
+    }
+  }
+
+  return false
+})()
+
+export function prefixStyle(style) {
+  if (vendor === false) {
+    return false
+  }
+
+  if (vendor === 'standard') {
+    return style
+  }
+
+  return vendor + style.charAt(0).toUpperCase() + style.substr(1)
+}
+
+
+// 如何使用
+const transform = prefixStyle('transform')
+
+this.$refs.layer.style[transform]=`translate3d(0,${translateY}px,0)`
+```
+
+<br />
+
+- 数组洗牌
+```
+// 返回随机整数
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min)
+}
+
+// 为了不修改原数组，需要对原数组的副本进行操作
+export function shuffle(arr) {
+    let _arr = arr.slice()
+    for (let i = 0; i < _arr.length; i++) {
+        let j = getRandomInt(0, i)
+        
+        let temp = _arr[i]
+        _arr[i] = _arr[j]
+        _arr[j] = temp
+    }
+    return _arr
+}
+```
+<br />
+
+- 节流
+```
+// 节流
+export function debounce(func, delay) {
+    let timer
+    return function (...args) {
+        if (timer) {
+            clearTimeout(timer)
+        }
+        timer = setTimeout(() => {
+            func.apply(this, args)
+        }, delay)
+    }
+}
+
+// 未使用节流时
+created() {
+  this.$watch('query', (newQuery) => {
+    this.$emit('query', newQuery)
+  })
+}
+
+// 使用节流
+created() {
+  this.$watch('query', debounce((newQuery) => {
+    this.$emit('query', newQuery)
+  },200))
+}
+```
+<br />
+
+- localstorage插件使用, 和 findIndex 的另一种用法
+```
+import storage from 'good-storage'
+
+const SEARCH_KEY = '__search__'
+const SEARCH_MAX_LENGTH = 15
+
+function insertArray(arr, val, compare, maxLen) { // 定义一个比较函数 compare
+    const index = arr.findIndex(compare)
+    if (index === 0) {
+        return
+    }
+    if (index > 0) {
+        arr.splice(index, 1)
+    }
+    arr.unshift(val)
+    if (maxLen && arr.length > maxLen) {
+        // 超过数组最大长度,则踢出最后一个
+        arr.pop()
+    }
+}
+
+// 保存搜索历史
+export function saveSearch(query) {
+    let searches = storage.get(SEARCH_KEY, []) // 第二个参数表示默认值
+    insertArray(searches, query, (item) => {
+        return item === query
+    }, SEARCH_MAX_LENGTH)
+
+    storage.set(SEARCH_KEY, searches)
+    return searches
+}
 ```
